@@ -1,0 +1,61 @@
+From 032ec5c11c5c559bb89e9abd75f8598fe716c91d Mon Sep 17 00:00:00 2001
+From: Nico Rieck <nico.rieck@gmail.com>
+Date: Sun, 29 Nov 2020 18:50:30 +0100
+Subject: [PATCH] Workaround MSVC compiler error in C++20 mode
+
+---
+ include/outcome/detail/coroutine_support.ipp | 8 ++++++--
+ single-header/outcome.hpp                    | 8 ++++++--
+ 2 files changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/include/outcome/detail/coroutine_support.ipp b/include/outcome/detail/coroutine_support.ipp
+index fc975ec38..c63a72a6f 100644
+--- a/include/outcome/detail/coroutine_support.ipp
++++ b/include/outcome/detail/coroutine_support.ipp
+@@ -104,13 +104,17 @@ namespace awaitables
+     OUTCOME_TREQUIRES(OUTCOME_TPRED(OUTCOME_V2_NAMESPACE::detail::is_constructible<U, T>))
+     inline bool try_set_error(T &&e, U *result)
+     {
+-      new(result) U(static_cast<T &&>(e));
++      using V = U; // Workaround for MSVC 16.28 compiler error in C++20 mode
++      new(result) V(static_cast<T &&>(e));
+       return true;
+     }
+     template <class T> inline bool try_set_error(T && /*unused*/, ...) { return false; }
+     OUTCOME_TEMPLATE(class T, class U)
+     OUTCOME_TREQUIRES(OUTCOME_TPRED(OUTCOME_V2_NAMESPACE::detail::is_constructible<U, T>))
+-    inline void set_or_rethrow(T &e, U *result) { new(result) U(e); }
++    inline void set_or_rethrow(T &e, U *result) {
++      using V = U; // Workaround for MSVC 16.28 compiler error in C++20 mode
++      new(result) V(e);
++    }
+     template <class T> inline void set_or_rethrow(T &e, ...) { rethrow_exception(e); }
+     template <class T> class fake_atomic
+     {
+diff --git a/single-header/outcome.hpp b/single-header/outcome.hpp
+index 904f251e3..c0b2632ed 100644
+--- a/single-header/outcome.hpp
++++ b/single-header/outcome.hpp
+@@ -1783,13 +1783,17 @@ namespace awaitables
+     OUTCOME_TREQUIRES(OUTCOME_TPRED(OUTCOME_V2_NAMESPACE::detail::is_constructible<U, T>))
+     inline bool try_set_error(T &&e, U *result)
+     {
+-      new(result) U(static_cast<T &&>(e));
++      using V = U; // Workaround for MSVC 16.28 compiler error in C++20 mode
++      new(result) V(static_cast<T &&>(e));
+       return true;
+     }
+     template <class T> inline bool try_set_error(T && /*unused*/, ...) { return false; }
+     OUTCOME_TEMPLATE(class T, class U)
+     OUTCOME_TREQUIRES(OUTCOME_TPRED(OUTCOME_V2_NAMESPACE::detail::is_constructible<U, T>))
+-    inline void set_or_rethrow(T &e, U *result) { new(result) U(e); }
++    inline void set_or_rethrow(T &e, U *result) {
++      using V = U; // Workaround for MSVC 16.28 compiler error in C++20 mode
++      new(result) V(e);
++    }
+     template <class T> inline void set_or_rethrow(T &e, ...) { rethrow_exception(e); }
+     template <class T> class fake_atomic
+     {
+-- 
+2.28.0.windows.1
+
